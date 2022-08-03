@@ -1,0 +1,65 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:14.4-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Elixir
+        id: beam
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.13.4" # Define the elixir version [required]
+          otp-version: "25.0.2" # Define the OTP version [required]
+      # cache `mix deps.get`
+      - name: Restore dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: deps
+          key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-
+      - name: Install dependencies
+        run: mix deps.get
+      # cache `mix deps.compile` for test and dev environment
+      - name: Restore compiled dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            _build/test
+            _build/dev
+          key: ${{ runner.os }}-compiled-${{ hashFiles('**/mix.lock') }}
+          restore-keys: ${{ runner.os }}-compiled-
+      - name: Compile dependencies
+        run: |
+          env MIX_ENV=test mix deps.compile
+          env MIX_ENV=dev mix deps.compile
+
+      - name: Compile project
+        run: env MIX_ENV=test mix compile --warnings-as-errors
+
+      - name: Run tests
+        run: mix test
