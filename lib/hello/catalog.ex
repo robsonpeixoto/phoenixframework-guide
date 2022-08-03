@@ -37,6 +37,14 @@ defmodule Hello.Catalog do
   """
   def get_product!(id), do: Repo.get!(Product, id)
 
+  def inc_page_view(%Product{} = product) do
+    {1, [%Product{views: views}]} =
+      from(p in Product, where: p.id == ^product.id, select: [:views])
+      |> Repo.update_all(inc: [views: 1])
+
+    put_in(product.views, views)
+  end
+
   @doc """
   Creates a product.
 
