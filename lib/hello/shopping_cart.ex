@@ -129,7 +129,7 @@ defmodule Hello.ShoppingCart do
 
     Ecto.Multi.new()
     |> Ecto.Multi.update(:cart, changeset)
-    |> Ecto.Multi.delete_all(:discarded_items, fn %{cart: cart}->
+    |> Ecto.Multi.delete_all(:discarded_items, fn %{cart: cart} ->
       from(i in CartItem, where: i.cart_id == ^cart.id and i.quantity == 0)
     end)
     |> Repo.transaction()
@@ -153,6 +153,11 @@ defmodule Hello.ShoppingCart do
   """
   def delete_cart(%Cart{} = cart) do
     Repo.delete(cart)
+  end
+
+  def prune_cart_items(%Cart{} = cart) do
+    {_, _} = Repo.delete_all(from(i in CartItem, where: i.cart_id == ^cart.id))
+    {:ok, reload_cart(cart)}
   end
 
   @doc """

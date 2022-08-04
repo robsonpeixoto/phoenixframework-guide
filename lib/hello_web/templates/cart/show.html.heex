@@ -19,5 +19,7 @@
     <%= submit "update chart" %>
   <% end %>
   <b>Total</b>: <%= currency_to_str(ShoppingCart.total_cart_price(@cart)) %>
+
+  <%= link "Complete order", to: Routes.order_path(@conn, :create), method: :post %>
 <% end %>
 
